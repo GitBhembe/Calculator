@@ -11,24 +11,16 @@ class Calculator {
     this.previousOperand = ''
     this.operation = undefined
     this.error = false;
-    this.parenthesesCount = 0; // Track open parentheses
   }
 
   delete() {
     if (this.error) return;
-    const lastChar = this.currentOperand.toString().slice(-1);
-    if (lastChar === '(') this.parenthesesCount--;
-    if (lastChar === ')') this.parenthesesCount++;
     this.currentOperand = this.currentOperand.toString().slice(0, -1);
   }
 
   appendNumber(number) {
     if (this.error) return;
-    if (number === '(' || number === ')') {
-      this.handleParentheses(number);
-      return;
-    }
-    if(number === 'π'){
+    if(number==='π'){
       number = Math.PI.toString();
     }
     if (number === '.' && this.currentOperand.includes('.')) return;
@@ -39,89 +31,52 @@ class Calculator {
     }
   }
 
-  handleParentheses(parenthesis) {
-    if (parenthesis === '(') {
-      // Add multiplication operator if needed
-      if (this.currentOperand !== '' && 
-          !isNaN(this.currentOperand.slice(-1)) && 
-          !this.currentOperand.endsWith('(') && 
-          !this.currentOperand.endsWith('+') && 
-          !this.currentOperand.endsWith('-') && 
-          !this.currentOperand.endsWith('*') && 
-          !this.currentOperand.endsWith('÷')) {
-        this.currentOperand += '*';
-      }
-      this.parenthesesCount++;
-      this.currentOperand += '(';
-    } else if (parenthesis === ')') {
-      // Only add closing parenthesis if there are open ones
-      if (this.parenthesesCount > 0) {
-        this.parenthesesCount--;
-        this.currentOperand += ')';
-      }
-    }
+chooseOperation(operation) {
+  if (this.error) return;
+  if (this.currentOperand === '') return;
+  if (this.previousOperand !== '') {
+    this.compute();
   }
-
-  chooseOperation(operation) {
-    if (this.error) return;
-    if (this.currentOperand === '') return;
-    if (this.previousOperand !== '') {
-      this.compute();
-    }
-    this.operation = operation;
-    this.previousOperand = this.currentOperand;
-    this.currentOperand = '';
-  }
+  this.operation = operation;
+  this.previousOperand = this.currentOperand;
+  this.currentOperand = '';
+}
 
   compute() {
     try {
-      // Add missing closing parentheses
-      let expression = this.currentOperand;
-      while (this.parenthesesCount > 0) {
-        expression += ')';
-        this.parenthesesCount--;
+      let computation;
+      const prev = parseFloat(this.previousOperand);
+      const current = parseFloat(this.currentOperand);
+      if (isNaN(prev) || isNaN(current)) throw new Error('Invalid Input');
+      switch (this.operation) {
+        case '+':
+          computation = prev + current;
+          break;
+        case '-':
+          computation = prev - current;
+          break;
+        case '*':
+          computation = prev * current;
+          break;
+        case '÷':
+          if (current === 0) throw new Error('Cannot divide by zero');
+          computation = prev / current;
+          break;
+        case '^':
+          computation = Math.pow(prev, current);
+          break;
+        default:
+          throw new Error('Invalid Operation');
       }
-
-      // Replace ÷ with / for evaluation
-      expression = expression.replace(/÷/g, '/');
-      
-      // Validate expression
-      if (!this.validateExpression(expression)) {
-        throw new Error('Invalid expression');
-      }
-
-      // Evaluate the expression
-      const result = Function('return ' + expression)();
-      
-      if (!isFinite(result)) {
-        throw new Error('Invalid calculation');
-      }
-
-      this.currentOperand = this.roundResult(result).toString();
+      this.currentOperand = computation;
       this.operation = undefined;
       this.previousOperand = '';
-      this.parenthesesCount = 0;
     } catch (error) {
       this.error = true;
       this.currentOperand = 'Error';
     }
   }
-
-  validateExpression(expr) {
-    // Basic validation to check for valid mathematical expression
-    const validChars = /^[0-9+\-*\/().π\s]*$/;
-    if (!validChars.test(expr)) return false;
-    
-    // Check for balanced parentheses
-    let count = 0;
-    for (let char of expr) {
-      if (char === '(') count++;
-      if (char === ')') count--;
-      if (count < 0) return false;
-    }
-    return true;
-  }
-
+  
   computeScientific(operation) {
     const current = parseFloat(this.currentOperand)
     if (isNaN(current)) return
@@ -155,6 +110,12 @@ class Calculator {
       case 'n!':
         result = this.factorial(current);
         break;
+
+      case '(':
+      case ')':
+        this.appendNumber(operation);
+        break;
+
       case 'x^y':
         this.previousOperand = this.currentOperand;
         this.currentOperand = '';
@@ -165,9 +126,11 @@ class Calculator {
     }
     if(this.error){
       this.currentOperand = 'Error'
-    } else {
-      this.currentOperand = this.roundResult(result).toString();
     }
+    
+    else{
+      this.currentOperand = this.roundResult(result).toString();}
+    
   }
 
   computePercentage() {
